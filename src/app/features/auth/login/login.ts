@@ -6,6 +6,7 @@ import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 // Importamos nuestro servicio 'Auth' para poder comunicarnos con Firebase.
 import { Auth } from '../../../core/services/auth';
+import { Router } from '@angular/router';
 
 // --- DEFINICIÓN DEL COMPONENTE ---
 
@@ -25,6 +26,8 @@ export class Login {
   // Inyectamos la instancia singleton de nuestro servicio de autenticación usando la función 'inject'.
   private auth = inject(Auth);
 
+  private router = inject(Router); 
+
   // Definimos propiedades públicas que se enlazarán a los campos del formulario en el HTML.
   email = '';
   password = '';
@@ -37,6 +40,8 @@ export class Login {
       // 'await' pausa la ejecución hasta que la promesa del método 'login' se resuelva.
       const userCredential = await this.auth.login(this.email, this.password);
       // Si el login es exitoso, lo mostramos en la consola. Más adelante aquí habrá una redirección.
+      this.router.navigate(['/dashboard']);
+
       console.log('¡Inicio de sesión exitoso!', userCredential.user);
     } catch (error) {
       // Si el método 'login' falla (ej: contraseña incorrecta), el error se captura aquí.
@@ -50,6 +55,7 @@ export class Login {
       // Esperamos a que el proceso de login con Google a través del popup se complete.
       const userCredential = await this.auth.loginWithGoogle();
       console.log('¡Inicio de sesión con Google exitoso!', userCredential.user);
+      this.router.navigate(['/dashboard']);
     } catch (error) {
       // Manejamos cualquier error que pueda ocurrir durante el proceso (ej: el usuario cierra el popup).
       console.error('Error con Google:', error);
