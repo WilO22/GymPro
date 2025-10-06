@@ -1,14 +1,10 @@
-// import { Routes } from '@angular/router';
-
-// export const routes: Routes = [];
-
 import { Routes } from '@angular/router';
-import { Login } from './features/auth/login/login'; // ¡Importamos nuestro componente!
+import { Login } from './features/auth/login/login';
+import { Register } from './features/auth/register/register';
 
 export const routes: Routes = [
-  // Cuando la URL sea /login, muestra el componente Login
-  { path: 'login', component: Login },
+  { path: 'register', component: Register },
 
-  // Si la URL está vacía (la página de inicio), redirige a /login por ahora
+  { path: 'login', component: Login },
   { path: '', redirectTo: 'login', pathMatch: 'full' }
 ];
