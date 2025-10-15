@@ -1,38 +1,60 @@
 import { Component, inject } from '@angular/core';
 import { AsyncPipe } from '@angular/common';
-import { Observable } from 'rxjs';
+// 1. Importamos herramientas de RxJS para manejar el flujo de datos
+import { Observable, BehaviorSubject, switchMap } from 'rxjs';
 
-// Importamos el SERVICIO DE LECTURA del usuario para OBTENER las clases
-import { Class as ClassService } from '../../user/services/class'; 
-// Importamos el MODELO para saber la forma de los datos
-import { Class as ClassModel } from '../../../models/class'; 
+import { Class as ClassReaderService } from '../../user/services/class';
+import { Class as ClassAdminService } from '../services/class';
+import { Class as ClassModel } from '../../../models/class';
+import { ClassForm } from '../components/class-form/class-form';
 
 @Component({
   selector: 'app-class-management',
   standalone: true,
-  imports: [AsyncPipe],
+  imports: [AsyncPipe, ClassForm],
   templateUrl: './class-management.html'
 })
 export class ClassManagement {
-  // Inyectamos el servicio que sabe cómo OBTENER las clases
-  private classService = inject(ClassService);
+  private classReaderService = inject(ClassReaderService);
+  private classAdminService = inject(ClassAdminService);
 
-  // Creamos el observable que contendrá la lista de clases para el HTML
+  // 2. Creamos un "disparador" (trigger) para refrescar los datos.
+  // Un BehaviorSubject es como un tablón de anuncios que siempre tiene un valor.
+  private refreshTrigger$ = new BehaviorSubject<void>(undefined);
+
   public classes$: Observable<ClassModel[]>;
+  public isModalVisible = false;
 
   constructor() {
-    // Le pedimos al servicio que nos traiga todas las clases
-    this.classes$ = this.classService.getClasses();
+    // 3. Ahora, classes$ escucha a nuestro disparador.
+    // Cada vez que el disparador emita un valor, switchMap cancelará la
+    // petición anterior y hará una nueva llamada a getClasses().
+    this.classes$ = this.refreshTrigger$.pipe(
+      switchMap(() => this.classReaderService.getClasses())
+    );
   }
 
-  // Dejamos estas funciones listas para conectarlas más adelante
-  createClass() { 
-    console.log('Botón "Crear Clase" presionado.'); 
+  openCreateModal() {
+    this.isModalVisible = true;
   }
-  editClass(classItem: ClassModel) { 
-    console.log('Editando clase:', classItem); 
+
+  closeModal() {
+    this.isModalVisible = false;
   }
-  deleteClass(classItem: ClassModel) { 
-    console.log('Eliminando clase:', classItem); 
+
+  async handleSave(classData: Omit<ClassModel, 'id' | 'bookedSlots'>) {
+    try {
+      await this.classAdminService.createClass(classData);
+      console.log('¡Clase creada con éxito!');
+      this.closeModal();
+
+      // 4. ¡LA MAGIA! Después de guardar, activamos el disparador.
+      // Esto le dice a classes$ que tiene que volver a buscar los datos.
+      this.refreshTrigger$.next();
+    } catch (error) {
+      console.error('Error al crear la clase:', error);
+      alert('Hubo un error al crear la clase.');
+    }
   }
+  // ... (otros métodos)
 }

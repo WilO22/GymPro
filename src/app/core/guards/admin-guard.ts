@@ -1,32 +1,37 @@
 import { inject } from '@angular/core';
-import { CanActivateFn, Router, UrlTree } from '@angular/router'; // Importa UrlTree
+import { CanActivateFn, Router } from '@angular/router';
 import { Auth as FirebaseAuth, authState } from '@angular/fire/auth';
-import { Firestore, doc, getDoc } from '@angular/fire/firestore';
-import { firstValueFrom } from 'rxjs';
+// 1. Importamos DocumentReference para forzar el tipo
+import { Firestore, doc, docData, DocumentReference } from '@angular/fire/firestore';
+import { of } from 'rxjs';
+import { map, switchMap, take } from 'rxjs/operators';
+import { User } from '../../models/user';
 
-// La función ahora es 'async' y devuelve una Promesa
-export const adminGuard: CanActivateFn = async (route, state): Promise<boolean | UrlTree> => {
+export const adminGuard: CanActivateFn = (route, state) => {
   const auth = inject(FirebaseAuth);
   const firestore = inject(Firestore);
   const router = inject(Router);
 
-  // Esperamos a tener una respuesta definitiva del estado de autenticación
-  const user = await firstValueFrom(authState(auth));
+  return authState(auth).pipe(
+    take(1),
+    switchMap(user => {
+      if (user) {
+        // 2. Forzamos el tipo de la referencia, diciéndole a TypeScript qué esperar.
+        const userDocRef = doc(firestore, `users/${user.uid}`) as DocumentReference<User>;
 
-  if (user) {
-    const userDocRef = doc(firestore, `users/${user.uid}`);
-    const userDocSnap = await getDoc(userDocRef);
-
-    if (userDocSnap.exists() && userDocSnap.data()['role'] === 'admin') {
-      return true; // ¡PERMITIDO! Es admin.
-    } else {
-      // NO PERMITIDO. No es admin.
-      // Devolvemos un 'UrlTree' para redirigir al dashboard.
-      return router.parseUrl('/dashboard');
-    }
-  } else {
-    // NO PERMITIDO. No hay sesión iniciada.
-    // Devolvemos un 'UrlTree' para redirigir al login.
-    return router.parseUrl('/login');
-  }
+        // Ahora, docData sabe que recibirá una referencia que coincide con su expectativa.
+        return docData(userDocRef).pipe(
+          map(userProfile => {
+            if (userProfile && userProfile.role === 'admin') {
+              return true;
+            } else {
+              return router.createUrlTree(['/dashboard']);
+            }
+          })
+        );
+      } else {
+        return of(router.createUrlTree(['/login']));
+      }
+    })
+  );
 };
