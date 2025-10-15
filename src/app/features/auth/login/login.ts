@@ -35,30 +35,44 @@ export class Login {
   // --- MÉTODO QUE SE EJECUTA AL ENVIAR EL FORMULARIO DE LOGIN ---
   // La palabra clave 'async' indica que esta función manejará operaciones asíncronas.
   async onLogin() {
-    // El bloque 'try...catch' es un mecanismo para manejar errores de forma controlada.
     try {
-      // 'await' pausa la ejecución hasta que la promesa del método 'login' se resuelva.
       const userCredential = await this.auth.login(this.email, this.password);
-      // Si el login es exitoso, lo mostramos en la consola. Más adelante aquí habrá una redirección.
-      this.router.navigate(['/dashboard']);
+      const profile = await this.auth.getUserProfile(userCredential.user.uid);
 
-      console.log('¡Inicio de sesión exitoso!', userCredential.user);
-    } catch (error) {
-      // Si el método 'login' falla (ej: contraseña incorrecta), el error se captura aquí.
+      if (profile && profile.role === 'admin') {
+        this.router.navigate(['/admin']);
+      } else {
+        this.router.navigate(['/dashboard']);
+      }
+    } catch (error) { // 'error' es de tipo 'unknown'
       console.error('Error en el inicio de sesión:', error);
+      // 1. Comprobamos si el error es una instancia de Error
+      if (error instanceof Error) {
+        alert('Error: ' + error.message);
+      } else {
+        alert('Ha ocurrido un error inesperado.');
+      }
     }
   }
 
-  // --- MÉTODO PARA INICIAR SESIÓN CON GOOGLE ---
   async onLoginWithGoogle() {
     try {
-      // Esperamos a que el proceso de login con Google a través del popup se complete.
       const userCredential = await this.auth.loginWithGoogle();
-      console.log('¡Inicio de sesión con Google exitoso!', userCredential.user);
-      this.router.navigate(['/dashboard']);
-    } catch (error) {
-      // Manejamos cualquier error que pueda ocurrir durante el proceso (ej: el usuario cierra el popup).
+      const profile = await this.auth.getUserProfile(userCredential.user.uid);
+
+      if (profile && profile.role === 'admin') {
+        this.router.navigate(['/admin']);
+      } else {
+        this.router.navigate(['/dashboard']);
+      }
+    } catch (error) { // 'error' también es de tipo 'unknown' aquí
       console.error('Error con Google:', error);
+      // 2. Hacemos la misma comprobación
+      if (error instanceof Error) {
+        alert('Error: ' + error.message);
+      } else {
+        alert('Ha ocurrido un error inesperado al iniciar sesión con Google.');
+      }
     }
   }
 }

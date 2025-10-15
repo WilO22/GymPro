@@ -1,65 +1,67 @@
-// --- SECCIÓN DE IMPORTACIONES: Cargamos las herramientas necesarias ---
-
-// Importamos 'Injectable' (un decorador) y 'inject' (una función) del núcleo de Angular para crear nuestro servicio.
 import { Injectable, inject } from '@angular/core';
-// Importamos las herramientas específicas de Firebase Authentication.
 import {
-  // Importamos la clase 'Auth' de Firebase y le damos un alias 'FirebaseAuth' para evitar conflictos de nombres.
   Auth as FirebaseAuth,
-  // Función para iniciar sesión con credenciales de correo y contraseña.
   signInWithEmailAndPassword,
-  // Función para crear una nueva cuenta de usuario.
   createUserWithEmailAndPassword,
-  // Clase que representa el proveedor de autenticación de Google.
   GoogleAuthProvider,
-  // Función para iniciar sesión a través de una ventana emergente (popup).
   signInWithPopup,
-  // Función para cerrar la sesión del usuario actual.
-  signOut
+  signOut,
+  UserCredential
 } from '@angular/fire/auth';
+import { Firestore, doc, getDoc, setDoc } from '@angular/fire/firestore';
+import { User as UserModel } from '../../models/user';
 
-// --- DEFINICIÓN DEL SERVICIO ---
-
-// El decorador '@Injectable' marca esta clase para que participe en el sistema de Inyección de Dependencias.
 @Injectable({
-  // 'providedIn: root' configura este servicio como un 'singleton', creando una única instancia para toda la aplicación.
   providedIn: 'root'
 })
-// Exportamos la clase 'Auth' para que pueda ser utilizada (inyectada) en otros componentes y servicios.
 export class Auth {
-
-  // Declaramos una propiedad privada 'auth' para mantener la instancia del servicio de Firebase.
-  // Usamos la función 'inject' para obtener la dependencia de 'FirebaseAuth' que registramos en app.config.ts.
   private auth: FirebaseAuth = inject(FirebaseAuth);
+  private firestore: Firestore = inject(Firestore);
 
-  // --- MÉTODO PARA INICIAR SESIÓN CON CORREO Y CONTRASEÑA ---
-  // Este método público recibe las credenciales del usuario.
+  async getUserProfile(uid: string) {
+    const userDocRef = doc(this.firestore, `users/${uid}`);
+    const userDocSnap = await getDoc(userDocRef);
+    return userDocSnap.exists() ? (userDocSnap.data() as UserModel) : null;
+  }
+
+  async register(email: string, password: string) {
+    const userCredential = await createUserWithEmailAndPassword(this.auth, email, password);
+    // Después de crear la cuenta, SIEMPRE creamos su perfil en Firestore.
+    await this.createUserProfile(userCredential.user.uid, userCredential.user.email!);
+    return userCredential;
+  }
+
+  async loginWithGoogle() {
+    const userCredential = await signInWithPopup(this.auth, new GoogleAuthProvider());
+    const user = userCredential.user;
+    
+    // ¡MEJORA IMPORTANTE!
+    // Después de un login con Google, verificamos si su perfil ya existe.
+    const profile = await this.getUserProfile(user.uid);
+    if (!profile) {
+      // Si no existe, lo creamos. Esto maneja el primer inicio de sesión.
+      await this.createUserProfile(user.uid, user.email!);
+    }
+    return userCredential;
+  }
+
+  // Este método privado ahora es más genérico
+  private createUserProfile(uid: string, email: string) {
+    const userDocRef = doc(this.firestore, `users/${uid}`);
+    const newUser: UserModel = {
+      uid: uid,
+      email: email,
+      role: 'user' // Por defecto, todos los nuevos usuarios son 'user'
+    };
+    return setDoc(userDocRef, newUser);
+  }
+
+  // --- MÉTODOS SIN CAMBIOS ---
   login(email: string, password: string) {
-    // Llama a la función de Firebase, pasando la instancia de autenticación y las credenciales.
-    // Devuelve una Promesa (Promise) que se resolverá con el resultado de la operación.
     return signInWithEmailAndPassword(this.auth, email, password);
   }
-
-  // --- MÉTODO PARA REGISTRAR UN NUEVO USUARIO ---
-  // Este método público se encarga de la creación de una nueva cuenta.
-  register(email: string, password: string) {
-    // Llama a la función de Firebase para crear un usuario y devuelve la Promesa correspondiente.
-    return createUserWithEmailAndPassword(this.auth, email, password);
-  }
-
-  // --- MÉTODO PARA INICIAR SESIÓN CON GOOGLE ---
-  // Este método gestiona el flujo de autenticación mediante un proveedor externo como Google.
-  loginWithGoogle() {
-    // Llama a la función de Firebase para mostrar una ventana emergente.
-    // Necesita la instancia de 'auth' y una nueva instancia del proveedor de Google.
-    return signInWithPopup(this.auth, new GoogleAuthProvider());
-  }
-
-  // --- MÉTODO PARA CERRAR SESIÓN ---
-  // Cierra la sesión activa del usuario en el dispositivo actual.
+  
   logout() {
-    // Llama a la función de Firebase para cerrar la sesión y devuelve la Promesa.
     return signOut(this.auth);
   }
-
 }
