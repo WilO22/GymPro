@@ -1,25 +1,26 @@
-import { Component, EventEmitter, Output } from '@angular/core';
+// --- ¡NUEVO! --- Se importa Input y OnInit
+import { Component, EventEmitter, Output, Input, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Class as ClassModel } from '../../../../models/class';
 
 @Component({
   selector: 'app-class-form',
   standalone: true,
-  imports: [FormsModule], // Necesitamos FormsModule para [(ngModel)]
+  imports: [FormsModule],
   templateUrl: './class-form.html'
 })
-export class ClassForm {
-  // @Output() es un decorador que crea un "evento" personalizado.
-  // Le estamos diciendo a Angular: "Este componente puede emitir un evento llamado 'save'".
-  // El 'EventEmitter' enviará los datos de la clase.
-  @Output() save = new EventEmitter<Omit<ClassModel, 'id' | 'bookedSlots'>>();
+// --- ¡NUEVO! --- Implementamos OnInit para reaccionar a los inputs iniciales.
+export class ClassForm implements OnInit {
+  // --- ¡NUEVO! ---
+  // @Input() permite que el componente padre (class-management) nos pase datos.
+  // Puede recibir una ClassModel completa o null.
+  @Input() classData: ClassModel | null = null;
 
-  // @Output() para emitir un evento cuando se cancele.
+  @Output() save = new EventEmitter<Omit<ClassModel, 'id' | 'bookedSlots'> | ClassModel>();
   @Output() cancel = new EventEmitter<void>();
 
-  // 'newClass' es el objeto que enlazaremos a nuestro formulario con ngModel.
-  // Lo inicializamos con valores por defecto.
-  public newClass: Omit<ClassModel, 'id' | 'bookedSlots'> = {
+  // 'currentClass' es el objeto que enlazaremos al formulario.
+  public currentClass: Omit<ClassModel, 'id' | 'bookedSlots'> | ClassModel = {
     name: '',
     description: '',
     trainer: '',
@@ -29,13 +30,23 @@ export class ClassForm {
     cost: 20
   };
 
-  // Esta función se llamará cuando el formulario se envíe.
-  onSubmit() {
-    // Emite el evento 'save' con los datos del formulario.
-    this.save.emit(this.newClass);
+  // --- ¡NUEVO! ---
+  // El método ngOnInit se ejecuta una vez, después de que los @Input() han sido recibidos.
+  ngOnInit() {
+    // Si recibimos datos de una clase para editar...
+    if (this.classData) {
+      // ...copiamos sus propiedades a nuestro objeto del formulario.
+      // Usamos '...this.classData' para crear una copia y evitar modificar el original directamente.
+      this.currentClass = { ...this.classData };
+    }
   }
 
-  // Esta función se llamará al hacer clic en cancelar.
+  onSubmit() {
+    // Emitimos el objeto 'currentClass' tal como está.
+    // El componente padre sabrá si es una edición (si tiene 'id') o una creación.
+    this.save.emit(this.currentClass);
+  }
+
   onCancel() {
     this.cancel.emit();
   }
