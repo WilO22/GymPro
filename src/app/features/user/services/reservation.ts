@@ -1,5 +1,18 @@
-import { Injectable, inject, signal } from '@angular/core';
-import { Firestore, collection, addDoc, query, where, collectionData, doc, deleteDoc } from '@angular/fire/firestore';
+// src/app/features/user/services/reservation.ts
+
+import { Injectable, inject, signal, runInInjectionContext, Injector } from '@angular/core';
+import {
+  Firestore,
+  collection,
+  query,
+  where,
+  collectionData,
+  doc,
+  deleteDoc,
+  runTransaction,
+  increment,
+  getDocs // --- ¡NUEVO! --- Importamos getDocs para la consulta única
+} from '@angular/fire/firestore';
 import { Auth as FirebaseAuth, authState } from '@angular/fire/auth';
 import { Reservation as ReservationModel } from '../../../models/reservation';
 import { Class as ClassModel } from '../../../models/class';
@@ -11,52 +24,100 @@ import { Observable, of, switchMap } from 'rxjs';
 export class Reservation {
   private firestore: Firestore = inject(Firestore);
   private auth: FirebaseAuth = inject(FirebaseAuth);
+  private injector = inject(Injector);
 
-  // 1. Creamos un Signal PRIVADO y escribible. Nadie fuera de este servicio puede modificarlo.
   private readonly _reservations = signal<ReservationModel[]>([]);
-  // 2. Exponemos una versión PÚBLICA y de SOLO LECTURA del signal.
   public readonly reservations = this._reservations.asReadonly();
 
   constructor() {
-    // 3. En el constructor, nos suscribimos al flujo de datos de Firebase.
-    authState(this.auth).pipe(
-      switchMap(user => {
-        if (user) {
-          // Si hay usuario, obtenemos sus reservas en tiempo real.
-          const reservationCollection = collection(this.firestore, 'reservations');
-          const q = query(reservationCollection, where("userId", "==", user.uid));
-          return collectionData(q, { idField: 'id' }) as Observable<ReservationModel[]>;
-        } else {
-          // Si no hay usuario, devolvemos un array vacío.
-          return of([]);
-        }
-      })
-    ).subscribe(reservationsData => {
-      // 4. CADA VEZ que Firebase nos envía una lista actualizada (ya sea por carga inicial o un cambio),
-      // actualizamos nuestro signal privado con .set().
-      this._reservations.set(reservationsData);
+    runInInjectionContext(this.injector, () => {
+      authState(this.auth).pipe(
+        switchMap(user => {
+          if (user) {
+            const reservationCollection = collection(this.firestore, 'reservations');
+            const q = query(reservationCollection, where("userId", "==", user.uid));
+            return collectionData(q, { idField: 'id' }) as Observable<ReservationModel[]>;
+          } else {
+            return of([]);
+          }
+        })
+      ).subscribe(reservationsData => {
+        this._reservations.set(reservationsData);
+      });
     });
   }
 
-  // El método para crear una reserva no necesita cambios. Al ejecutarse, Firestore
-  // notificará a nuestra suscripción en el constructor, y el signal se actualizará solo.
   async createReservation(classItem: ClassModel) {
     const user = this.auth.currentUser;
     if (!user) throw new Error('Usuario no autenticado.');
+    if (!classItem.id) throw new Error('ID de clase no válido.');
 
-    const newReservation: Omit<ReservationModel, 'id'> = {
-      userId: user.uid,
-      classId: classItem.id!,
-      status: 'PENDIENTE_PAGO',
-      createdAt: new Date()
-    };
+    const classDocRef = doc(this.firestore, `classes/${classItem.id}`);
     const reservationCollection = collection(this.firestore, 'reservations');
-    return addDoc(reservationCollection, newReservation);
+
+    return runTransaction(this.firestore, async (transaction) => {
+      // --- ¡CAMBIO CLAVE! --- Verificación de reserva duplicada
+      const existingReservationQuery = query(
+        reservationCollection,
+        where('userId', '==', user.uid),
+        where('classId', '==', classItem.id),
+        where('status', 'in', ['CONFIRMADA', 'PENDIENTE_PAGO']) // Solo consideramos reservas activas
+      );
+      
+      // Usamos getDocs para ejecutar la consulta directamente
+      const existingReservationsSnapshot = await getDocs(existingReservationQuery);
+
+      if (!existingReservationsSnapshot.empty) {
+        throw new Error('¡Ya tienes una reserva activa para esta clase!');
+      }
+      // --- Fin del cambio clave ---
+
+      const classDoc = await transaction.get(classDocRef);
+
+      if (!classDoc.exists()) {
+        throw new Error("¡La clase ya no existe!");
+      }
+
+      const currentBookedSlots = classDoc.data()['bookedSlots'] || 0;
+      const totalSlots = classDoc.data()['totalSlots'];
+
+      if (currentBookedSlots >= totalSlots) {
+        throw new Error("¡Lo sentimos, ya no hay cupos disponibles para esta clase!");
+      }
+      
+      const newReservationData: Omit<ReservationModel, 'id'> = {
+        userId: user.uid,
+        classId: classItem.id!,
+        status: 'CONFIRMADA',
+        createdAt: new Date()
+      };
+      const newReservationRef = doc(reservationCollection);
+      transaction.set(newReservationRef, newReservationData);
+
+      transaction.update(classDocRef, {
+        bookedSlots: increment(1)
+      });
+    });
   }
 
-  // Lo mismo para borrar. Al eliminar el documento, Firestore avisará y el signal se actualizará.
   deleteReservation(reservationId: string) {
     const reservationDocRef = doc(this.firestore, `reservations/${reservationId}`);
-    return deleteDoc(reservationDocRef);
+    
+    return runTransaction(this.firestore, async (transaction) => {
+        const reservationDoc = await transaction.get(reservationDocRef);
+        
+        if (!reservationDoc.exists()) {
+            throw new Error("La reserva que intentas cancelar no existe.");
+        }
+
+        const classId = reservationDoc.data()['classId'];
+        const classDocRef = doc(this.firestore, `classes/${classId}`);
+
+        transaction.delete(reservationDocRef);
+
+        transaction.update(classDocRef, {
+            bookedSlots: increment(-1)
+        });
+    });
   }
 }

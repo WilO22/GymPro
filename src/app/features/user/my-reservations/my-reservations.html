@@ -1,10 +1,10 @@
-<div class="mt-12">
+<div>
   <h2 class="text-2xl font-bold text-slate-900 mb-6">Mis Reservas</h2>
 
   @if (reservations().length > 0) {
-    <div class="space-y-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       @for (res of reservations(); track res.id) {
-        <div class="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
+        <div class="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm flex flex-col justify-between">
           <div class="p-4">
             <div class="flex justify-between items-start">
               <div>

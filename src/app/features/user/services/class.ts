@@ -1,4 +1,7 @@
-import { Injectable, inject, signal } from '@angular/core';
+// src/app/features/user/services/class.ts
+
+// --- ¡NUEVO! --- Importamos inject y runInInjectionContext
+import { Injectable, inject, signal, runInInjectionContext, Injector } from '@angular/core';
 import { Firestore, collection, collectionData } from '@angular/fire/firestore';
 import { Class as ClassModel } from '../../../models/class';
 import { Observable } from 'rxjs';
@@ -8,20 +11,20 @@ import { Observable } from 'rxjs';
 })
 export class Class {
   private firestore: Firestore = inject(Firestore);
-  
-  // 1. Signal privado y escribible.
+  private injector = inject(Injector); // Obtenemos el inyector
+
   private readonly _classes = signal<ClassModel[]>([]);
-  // 2. Signal público de solo lectura.
   public readonly classes = this._classes.asReadonly();
 
   constructor() {
-    // 3. Nos suscribimos a los datos en tiempo real de las clases.
-    const classCollection = collection(this.firestore, 'classes');
-    const classes$ = collectionData(classCollection, { idField: 'id' }) as Observable<ClassModel[]>;
-    
-    classes$.subscribe(classesData => {
-      // 4. Actualizamos el signal cada vez que haya un cambio en la colección de clases.
-      this._classes.set(classesData);
+    // --- ¡CAMBIO CLAVE! --- Envolvemos la suscripción.
+    runInInjectionContext(this.injector, () => {
+      const classCollection = collection(this.firestore, 'classes');
+      const classes$ = collectionData(classCollection, { idField: 'id' }) as Observable<ClassModel[]>;
+      
+      classes$.subscribe(classesData => {
+        this._classes.set(classesData);
+      });
     });
   }
 }
