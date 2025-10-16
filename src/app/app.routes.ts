@@ -1,40 +1,30 @@
 import { Routes } from '@angular/router';
-import { Login } from './features/auth/login/login';
-import { Register } from './features/auth/register/register';
 import { UserDashboard } from './features/user/user-dashboard/user-dashboard';
 import { authGuard } from './core/guards/auth-guard';
-import { adminGuard } from './core/guards/admin-guard'; // 1. Importa el nuevo guardián
+import { adminGuard } from './core/guards/admin-guard';
 import { ClassManagement } from './features/admin/class-management/class-management';
 import { Landing } from './features/landing/landing';
-// --- ¡NUEVO! --- Importamos nuestro nuevo componente de layout.
-import { AuthLayout } from './features/auth/auth-layout/auth-layout';
+import { Login } from './features/auth/login/login';
+import { Register } from './features/auth/register/register';
+
+// Ya no necesitaremos el AuthLayout, así que lo puedes eliminar si quieres.
 
 export const routes: Routes = [
- 
-  // { path: '', component: Landing },
-  // { path: 'admin', component: ClassManagement, canActivate: [authGuard, adminGuard] }, 
-  // { path: 'dashboard', component: UserDashboard, canActivate: [authGuard] },
-  // { path: 'register', component: Register },
-  // { path: 'login', component: Login },
-  // { path: '**', redirectTo: '', pathMatch: 'full' }
-
-  { path: '', component: Landing },
-  
-  // --- ¡MODIFICADO! --- Creamos una ruta padre para el layout.
+  // --- ¡MODIFICACIÓN CLAVE! ---
   {
     path: '',
-    component: AuthLayout, // Este componente se renderizará primero...
+    component: Landing, // LandingComponent siempre será la base...
     children: [
-      // ...y luego, dentro de su <router-outlet>, se renderizará uno de estos hijos.
+      // ...y si la URL es /login o /register, estos componentes se renderizarán DENTRO de LandingComponent.
       { path: 'login', component: Login },
       { path: 'register', component: Register }
     ]
   },
 
+  // Las rutas protegidas se mantienen igual.
   { path: 'admin', component: ClassManagement, canActivate: [authGuard, adminGuard] }, 
   { path: 'dashboard', component: UserDashboard, canActivate: [authGuard] },
   
-  // Eliminamos las rutas planas de login y register de aquí porque ahora están anidadas.
-  
+  // La ruta comodín se mantiene al final.
   { path: '**', redirectTo: '', pathMatch: 'full' }
 ];
