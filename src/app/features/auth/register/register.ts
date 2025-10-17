@@ -20,6 +20,7 @@ export class Register {
 
   async onRegister() {
     try {
+      // Llama al servicio de autenticación
       const userCredential = await this.auth.register(this.email, this.password);
       console.log('¡Usuario registrado con éxito!', userCredential.user);
       this.router.navigate(['/dashboard']);

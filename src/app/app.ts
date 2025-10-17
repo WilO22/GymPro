@@ -12,3 +12,7 @@ import { Footer } from './shared/components/footer/footer';
 export class App {
   protected readonly title = signal('gym-pro');
 }
+
+
+
+
