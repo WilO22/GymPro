@@ -2,7 +2,20 @@
  * Script para generar archivos de ambiente desde variables de entorno
  * Se ejecuta antes del build en Vercel
  * 
- * Uso: node scripts/generate-env.js
+ * FLUJO:
+ * 1. Vercel lee variables desde Project Settings → Environment Variables
+ * 2. Este script genera environment.prod.ts y environment.ts usando esas variables
+ * 3. Angular compila con esos archivos generados
+ * 
+ * En LOCAL (desarrollo):
+ * - Lee de: .env.local (no commitear al repo)
+ * - Ejecuta: node scripts/generate-env.js (opcional, ya existe environment.ts)
+ * 
+ * En VERCEL (producción):
+ * - Lee de: Variables de entorno configuradas en Project Settings
+ * - Ejecuta automáticamente como parte del build
+ * 
+ * Uso manual: node scripts/generate-env.js
  */
 
 const fs = require('fs');
@@ -16,7 +29,10 @@ if (!fs.existsSync(envDir)) {
   fs.mkdirSync(envDir, { recursive: true });
 }
 
-// Valores por defecto (fallback) - REEMPLAZAR CON TUS VALORES
+// Valores por defecto (fallback)
+// ⚠️ IMPORTANTE: NO reemplaces estos valores dummy con claves reales
+// Las claves reales deben venir de las variables de entorno de Vercel
+// En local, usa .env.local
 const defaultEnv = {
   apiKey: 'YOUR_API_KEY_HERE',
   authDomain: 'your-project.firebaseapp.com',
