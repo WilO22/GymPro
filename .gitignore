@@ -42,13 +42,13 @@ __screenshots__/
 .DS_Store
 Thumbs.db
 
-# Environment files
-environment.prod.ts
-environment.ts
-
 # Vercel
 .vercel
 .vercel/output
+
+# Environment files - NUNCA subir a GitHub (contienen secretos)
+src/environments/environment.prod.ts
+src/environments/environment.ts
 
 # Environment variables
 .env

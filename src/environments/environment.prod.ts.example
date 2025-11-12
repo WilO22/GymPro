@@ -1,0 +1,23 @@
+// Firebase configuration for production
+// IMPORTANTE: Copia este archivo a environment.prod.ts y completa con tus valores
+// NO subas environment.prod.ts al repositorio
+
+// Usa las variables de entorno de Vercel o valores por defecto
+const firebaseApiKey = (globalThis as any)['NG_APP_FIREBASE_API_KEY'] || "YOUR_API_KEY_HERE";
+const firebaseAuthDomain = (globalThis as any)['NG_APP_FIREBASE_AUTH_DOMAIN'] || "your-project.firebaseapp.com";
+const firebaseProjectId = (globalThis as any)['NG_APP_FIREBASE_PROJECT_ID'] || "your-project-id";
+const firebaseStorageBucket = (globalThis as any)['NG_APP_FIREBASE_STORAGE_BUCKET'] || "your-project.firebasestorage.app";
+const firebaseMessagingSenderId = (globalThis as any)['NG_APP_FIREBASE_MESSAGING_SENDER_ID'] || "123456789";
+const firebaseAppId = (globalThis as any)['NG_APP_FIREBASE_APP_ID'] || "1:123456789:web:abc123";
+
+export const environment = {
+  production: true,
+  firebase: {
+    apiKey: firebaseApiKey,
+    authDomain: firebaseAuthDomain,
+    projectId: firebaseProjectId,
+    storageBucket: firebaseStorageBucket,
+    messagingSenderId: firebaseMessagingSenderId,
+    appId: firebaseAppId
+  }
+};

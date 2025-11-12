@@ -1,0 +1,15 @@
+// Firebase configuration for development
+// IMPORTANTE: Copia este archivo a environment.ts y completa con tus valores
+// NO subas environment.ts al repositorio
+
+export const environment = {
+  production: false,
+  firebase: {
+    apiKey: "YOUR_DEV_API_KEY_HERE",
+    authDomain: "your-project.firebaseapp.com",
+    projectId: "your-project-id",
+    storageBucket: "your-project.firebasestorage.app",
+    messagingSenderId: "123456789",
+    appId: "1:123456789:web:abc123"
+  }
+};
