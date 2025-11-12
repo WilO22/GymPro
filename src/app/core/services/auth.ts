@@ -56,7 +56,7 @@ export class Auth {
     return setDoc(userDocRef, newUser);
   }
 
-  // --- MÉTODOS SIN CAMBIOS ---
+  // --- MÉTODOS---
   login(email: string, password: string) {
     return signInWithEmailAndPassword(this.auth, email, password);
   }
