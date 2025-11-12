@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "ng build",
+  "buildCommand": "node scripts/generate-env.js && ng build",
   "outputDirectory": "dist/gym-pro/browser",
   "installCommand": "pnpm install",
   "framework": null,
