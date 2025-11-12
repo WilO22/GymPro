@@ -45,3 +45,12 @@ Thumbs.db
 # Environment files
 environment.prod.ts
 environment.ts
+
+# Vercel
+.vercel
+.vercel/output
+
+# Environment variables
+.env
+.env.local
+.env.*.local
