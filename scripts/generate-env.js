@@ -16,14 +16,14 @@ if (!fs.existsSync(envDir)) {
   fs.mkdirSync(envDir, { recursive: true });
 }
 
-// Valores por defecto (fallback)
+// Valores por defecto (fallback) - REEMPLAZAR CON TUS VALORES
 const defaultEnv = {
   apiKey: 'YOUR_API_KEY_HERE',
   authDomain: 'your-project.firebaseapp.com',
   projectId: 'your-project-id',
-  storageBucket: 'your-project-id.firebasestorage.app',
+  storageBucket: 'your-project.firebasestorage.app',
   messagingSenderId: '123456789',
-  appId: '1:123456789:web:1e6f0280feb1dad343a486'
+  appId: '1:123456789:web:abc123'
 };
 
 // Leer variables de entorno o usar defaults
